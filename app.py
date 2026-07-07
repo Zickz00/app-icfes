@@ -7,6 +7,114 @@ API_KEY = st.secrets["GROQ_API_KEY"]   # ← Cambia esto
 client = Groq(api_key=API_KEY)
 
 st.set_page_config(page_title="IA Preparador ICFES", page_icon="🚀", layout="wide")
+
+# ==================== ESTILO MINIMALISTA (solo interfaz, no toca lógica) ====================
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Fondo general gris claro */
+.stApp {
+    background-color: #F5F5F4;
+}
+
+/* Ocultar elementos por defecto de Streamlit para look de app */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Menos espacio arriba, contenido centrado tipo app */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 800px;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #EDEDEB;
+    border-right: 1px solid #E0E0DE;
+}
+section[data-testid="stSidebar"] label {
+    font-weight: 600;
+    color: #3D3D3A;
+}
+
+/* Títulos */
+h1 { color: #2B2B29; font-weight: 700; }
+h2, h3 { color: #3D3D3A; font-weight: 600; }
+
+/* Botones redondeados estilo pill */
+div.stButton > button {
+    border-radius: 999px;
+    border: none;
+    background-color: #2B2B29;
+    color: #FFFFFF;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+div.stButton > button:hover {
+    background-color: #4A4A47;
+    transform: translateY(-1px);
+}
+
+/* Inputs redondeados */
+div[data-baseweb="input"] > div,
+div[data-baseweb="select"] > div,
+div[data-baseweb="textarea"] textarea {
+    border-radius: 12px !important;
+    border: 1px solid #DEDEDC !important;
+}
+
+/* Opciones de radio como tarjetas */
+div[role="radiogroup"] label {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E5E3;
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.4rem;
+}
+
+/* Expanders del plan de estudio */
+details {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E5E3;
+    border-radius: 14px;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.6rem;
+}
+
+/* Burbujas de chat */
+[data-testid="stChatMessage"] {
+    background-color: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid #E5E5E3;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Alertas redondeadas (success, warning, info) */
+div[data-testid="stNotification"], .stAlert {
+    border-radius: 14px;
+}
+
+/* Ajustes para celular */
+@media (max-width: 640px) {
+    .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-top: 1rem;
+    }
+    h1 { font-size: 1.6rem; }
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🚀 IA Preparador ICFES")
 st.subheader("Tu tutor inteligente para el Saber 11 - con Groq")
 
