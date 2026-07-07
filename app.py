@@ -44,9 +44,24 @@ section[data-testid="stSidebar"] label {
     color: #3D3D3A;
 }
 
+/* Forzar colores de texto legibles en TODO el contenido, sin importar tema del navegador */
+.stApp, .stApp p, .stApp li, .stApp span, .stApp label,
+[data-testid="stMarkdownContainer"],
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {
+    color: #2B2B29 !important;
+}
+
 /* Títulos */
-h1 { color: #2B2B29; font-weight: 700; }
-h2, h3 { color: #3D3D3A; font-weight: 600; }
+h1 { color: #2B2B29 !important; font-weight: 700; }
+h2, h3 { color: #3D3D3A !important; font-weight: 600; }
+
+/* Texto dentro de botones siempre blanco (se re-declara después para que gane) */
+div.stButton > button, div.stButton > button * {
+    color: #FFFFFF !important;
+}
 
 /* Botones redondeados estilo pill */
 div.stButton > button {
