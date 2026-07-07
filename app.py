@@ -17,15 +17,18 @@ html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
 
-/* Fondo general gris claro */
+/* Fondo general gris oscuro tipo Claude */
 .stApp {
-    background-color: #F5F5F4;
+    background-color: #262624;
 }
 
-/* Ocultar elementos por defecto de Streamlit para look de app */
+/* Ocultar SOLO el menú hamburguesa y el pie de página, dejando el header visible
+   para que el botón de abrir/cerrar el sidebar siga funcionando */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
+header[data-testid="stHeader"] {
+    background-color: transparent;
+}
 
 /* Menos espacio arriba, contenido centrado tipo app */
 .block-container {
@@ -36,45 +39,45 @@ header {visibility: hidden;}
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: #EDEDEB;
-    border-right: 1px solid #E0E0DE;
+    background-color: #1E1E1C;
+    border-right: 1px solid #3A3A37;
 }
 section[data-testid="stSidebar"] label {
     font-weight: 600;
-    color: #3D3D3A;
+    color: #ECECE7 !important;
 }
 
-/* Forzar colores de texto legibles en TODO el contenido, sin importar tema del navegador */
+/* Forzar colores de texto claros en TODO el contenido, sin importar tema del navegador */
 .stApp, .stApp p, .stApp li, .stApp span, .stApp label,
 [data-testid="stMarkdownContainer"],
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li,
 [data-testid="stCaptionContainer"],
 [data-testid="stCaptionContainer"] p {
-    color: #2B2B29 !important;
+    color: #ECECE7 !important;
 }
 
 /* Títulos */
-h1 { color: #2B2B29 !important; font-weight: 700; }
-h2, h3 { color: #3D3D3A !important; font-weight: 600; }
+h1 { color: #FFFFFF !important; font-weight: 700; }
+h2, h3 { color: #ECECE7 !important; font-weight: 600; }
 
-/* Texto dentro de botones siempre blanco (se re-declara después para que gane) */
+/* Texto dentro de botones siempre claro (se re-declara después para que gane) */
 div.stButton > button, div.stButton > button * {
-    color: #FFFFFF !important;
+    color: #ECECE7 !important;
 }
 
 /* Botones redondeados estilo pill */
 div.stButton > button {
     border-radius: 999px;
-    border: none;
-    background-color: #2B2B29;
-    color: #FFFFFF;
+    border: 1px solid #4A4A47;
+    background-color: #33322F;
     padding: 0.5rem 1.5rem;
     font-weight: 500;
     transition: all 0.2s ease;
 }
 div.stButton > button:hover {
-    background-color: #4A4A47;
+    background-color: #3F3E3B;
+    border-color: #5A5A56;
     transform: translateY(-1px);
 }
 
@@ -83,13 +86,15 @@ div[data-baseweb="input"] > div,
 div[data-baseweb="select"] > div,
 div[data-baseweb="textarea"] textarea {
     border-radius: 12px !important;
-    border: 1px solid #DEDEDC !important;
+    border: 1px solid #4A4A47 !important;
+    background-color: #33322F !important;
+    color: #ECECE7 !important;
 }
 
 /* Opciones de radio como tarjetas */
 div[role="radiogroup"] label {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5E3;
+    background-color: #2F2E2B;
+    border: 1px solid #3F3E3A;
     border-radius: 12px;
     padding: 0.6rem 1rem;
     margin-bottom: 0.4rem;
@@ -97,23 +102,27 @@ div[role="radiogroup"] label {
 
 /* Expanders del plan de estudio */
 details {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5E3;
+    background-color: #2F2E2B;
+    border: 1px solid #3F3E3A;
     border-radius: 14px;
     padding: 0.5rem 1rem;
     margin-bottom: 0.6rem;
 }
+summary {
+    color: #ECECE7 !important;
+}
 
 /* Burbujas de chat */
 [data-testid="stChatMessage"] {
-    background-color: #FFFFFF;
+    background-color: #2F2E2B;
     border-radius: 16px;
-    border: 1px solid #E5E5E3;
+    border: 1px solid #3F3E3A;
     padding: 0.8rem 1rem;
     margin-bottom: 0.5rem;
 }
 
-/* Alertas redondeadas (success, warning, info) */
+/* Alertas (success, warning, info) solo redondeadas, dejamos que Streamlit
+   maneje sus propios colores de fondo/texto para que sigan siendo legibles */
 div[data-testid="stNotification"], .stAlert {
     border-radius: 14px;
 }
