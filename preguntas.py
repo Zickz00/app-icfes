@@ -55,6 +55,34 @@ BANCO_PREGUNTAS = {
             "opciones": ["1/3", "3", "5", "15"],
             "correcta": "3",
         },
+        {
+            "tema": "Lectura de tablas",
+            "pregunta": "La tabla muestra las ventas (en millones de pesos) de una tienda durante el primer semestre. ¿En qué mes se registraron las mayores ventas?",
+            "opciones": ["Enero", "Marzo", "Mayo", "Junio"],
+            "correcta": "Mayo",
+            "visual": {
+                "tipo": "tabla",
+                "columnas": ["Mes", "Ventas (millones)"],
+                "datos": [
+                    ["Enero", 12],
+                    ["Febrero", 15],
+                    ["Marzo", 14],
+                    ["Abril", 18],
+                    ["Mayo", 22],
+                    ["Junio", 19],
+                ],
+            },
+        },
+        {
+            "tema": "Figuras geométricas",
+            "pregunta": "Observa el triángulo rectángulo. Si su base mide 8 cm y su altura mide 6 cm, ¿cuál es su área?",
+            "opciones": ["14 cm²", "24 cm²", "48 cm²", "28 cm²"],
+            "correcta": "24 cm²",
+            "visual": {
+                "tipo": "figura_geometrica",
+                "svg": "<svg viewBox='0 0 220 160' xmlns='http://www.w3.org/2000/svg'><polygon points='20,140 180,140 20,20' fill='rgba(217,119,87,0.15)' stroke='#D97757' stroke-width='3'/><line x1='20' y1='140' x2='180' y2='140' stroke='#ECECE7' stroke-width='2'/><line x1='20' y1='140' x2='20' y2='20' stroke='#ECECE7' stroke-width='2'/><text x='85' y='158' fill='#ECECE7' font-size='14'>8 cm</text><text x='-25' y='85' fill='#ECECE7' font-size='14' transform='rotate(-90 30,85)'>6 cm</text></svg>",
+            },
+        },
     ],
     "Lectura Crítica": [
         {
@@ -175,6 +203,17 @@ BANCO_PREGUNTAS = {
             "opciones": ["Mayor", "Menor", "Igual", "No relacionada"],
             "correcta": "Igual",
         },
+        {
+            "tema": "Interpretación de gráficos",
+            "pregunta": "El gráfico muestra la temperatura registrada (°C) durante una semana. ¿En qué día se registró la temperatura más alta?",
+            "opciones": ["Lunes", "Miércoles", "Viernes", "Domingo"],
+            "correcta": "Viernes",
+            "visual": {
+                "tipo": "grafico_lineas",
+                "categorias": ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"],
+                "valores": [22, 24, 23, 26, 29, 27, 25],
+            },
+        },
     ],
     "Sociales y Ciudadanas": [
         {
@@ -239,6 +278,17 @@ BANCO_PREGUNTAS = {
             "pregunta": "Colombia es reconocida constitucionalmente como una nación:",
             "opciones": ["Monocultural", "Pluriétnica y multicultural", "Sin diversidad regional", "Homogénea lingüísticamente"],
             "correcta": "Pluriétnica y multicultural",
+        },
+        {
+            "tema": "Análisis de datos poblacionales",
+            "pregunta": "El gráfico muestra la población (en millones) de cuatro regiones de un país. ¿Cuál región tiene menor población?",
+            "opciones": ["Región A", "Región B", "Región C", "Región D"],
+            "correcta": "Región D",
+            "visual": {
+                "tipo": "grafico_barras",
+                "categorias": ["Región A", "Región B", "Región C", "Región D"],
+                "valores": [8.2, 5.6, 4.1, 2.3],
+            },
         },
     ],
     "Inglés": [

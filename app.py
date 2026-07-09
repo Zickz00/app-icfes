@@ -23,6 +23,24 @@ init_db()
 # Cuántas preguntas tomar de cada área para armar el diagnóstico
 PREGUNTAS_POR_AREA = 3
 
+# Instrucciones de sistema para el Chat IA: define el rol del tutor y los
+# límites de tema. Esto se envía en cada llamada a Groq como mensaje "system",
+# separado de lo que escribe el estudiante.
+SYSTEM_PROMPT = """Eres un tutor experto en la prueba Saber 11 (ICFES) de Colombia, dentro de una app de preparación para el examen.
+
+Tu rol:
+- Ayudas a estudiantes de secundaria a entender temas de Matemáticas, Lectura Crítica, Ciencias Naturales, Sociales y Ciudadanas, e Inglés, tal como se evalúan en el ICFES.
+- También puedes orientar sobre técnicas de estudio, manejo del tiempo, manejo de la ansiedad ante exámenes y estrategias para resolver preguntas de selección múltiple.
+- Explicas paso a paso, con ejemplos claros y cercanos a la realidad de un estudiante colombiano.
+- Tu tono es motivador, paciente y cercano, nunca condescendiente.
+
+Límites importantes:
+- Si el estudiante pregunta algo que NO tiene relación con el ICFES, las áreas del examen o la preparación académica (por ejemplo: chismes, temas personales de terceros, contenido para adultos, tareas de otras materias no relacionadas, opiniones políticas no académicas, etc.), respóndele amablemente que solo puedes ayudar con temas de estudio y preparación para el ICFES, y redirígelo a preguntar algo de esas áreas.
+- No completes tareas que no tengan fines educativos relacionados con el ICFES (por ejemplo, no escribas código, no redactes mensajes personales, no des consejos ajenos al estudio).
+- Responde siempre en español, salvo que el estudiante te pida practicar específicamente en inglés.
+- Sé conciso: prioriza explicaciones claras sobre respuestas largas, salvo que el estudiante pida más detalle.
+"""
+
 st.set_page_config(page_title="IA Preparador ICFES", page_icon="🚀", layout="wide")
 
 # ==================== ESTILO MINIMALISTA (solo interfaz, no toca lógica) ====================
@@ -318,6 +336,34 @@ ICONOS_AREA = {
 }
 
 
+def render_visual(visual):
+    """
+    Renderiza el elemento visual de una pregunta (tabla, gráfico de barras,
+    gráfico de líneas o figura geométrica), dentro de una tarjeta con borde.
+    El campo 'visual' de la pregunta define el 'tipo' y sus datos.
+    """
+    tipo = visual.get("tipo")
+    with st.container(border=True):
+        if tipo == "tabla":
+            st.caption("📋 Tabla de datos")
+            df = pd.DataFrame(visual["datos"], columns=visual["columnas"])
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+        elif tipo == "grafico_barras":
+            st.caption("📊 Gráfico de barras")
+            df = pd.DataFrame({"valor": visual["valores"]}, index=visual["categorias"])
+            st.bar_chart(df, color="#D97757")
+
+        elif tipo == "grafico_lineas":
+            st.caption("📈 Gráfico de líneas")
+            df = pd.DataFrame({"valor": visual["valores"]}, index=visual["categorias"])
+            st.line_chart(df, color="#D97757")
+
+        elif tipo == "figura_geometrica":
+            st.caption("📐 Figura geométrica")
+            st.markdown(visual["svg"], unsafe_allow_html=True)
+
+
 # ==================== INICIO ====================
 if menu == "🏠 Inicio":
     st.markdown('<span class="eyebrow">SABER 11 · ICFES</span>', unsafe_allow_html=True)
@@ -390,6 +436,8 @@ elif menu == "📝 Test Diagnóstico":
             if p["area"] != area_actual:
                 area_actual = p["area"]
                 st.markdown(f"#### {ICONOS_AREA.get(area_actual, '')} {area_actual}")
+            if p.get("visual"):
+                render_visual(p["visual"])
             resp = st.radio(p["pregunta"], p["opciones"], key=f"q{p['id']}", index=None)
             st.session_state.respuestas[p["id"]] = resp
 
@@ -574,10 +622,11 @@ elif menu == "💬 Chat IA":
 
         with st.spinner("Groq pensando..."):
             try:
+                mensajes_api = [{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.chat_history
                 completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=[{"role": "user", "content": prompt + " Responde como tutor experto para el ICFES en español, claro y útil."}],
-                    temperature=0.7,
+                    messages=mensajes_api,
+                    temperature=0.5,
                     max_tokens=800,
                 )
                 respuesta = completion.choices[0].message.content
