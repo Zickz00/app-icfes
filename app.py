@@ -237,6 +237,7 @@ div[data-testid="stMetric"] {
     border: 1px solid #3F3E3A;
     border-radius: 14px;
     padding: 0.9rem 1rem 0.7rem 1rem;
+    margin-bottom: 0.5rem;
 }
 div[data-testid="stMetricLabel"] {
     color: #A9A89F !important;
@@ -256,6 +257,54 @@ div[data-testid="stMetricValue"] {
 }
 .sidebar-footer b { color: #ECECE7 !important; }
 
+/* Flashcards generadas por IA */
+.flashcard {
+    border-radius: 18px;
+    padding: 1.4rem 1.3rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.6rem;
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.flashcard.front {
+    background-color: #2F2E2B;
+    border: 1px solid #3F3E3A;
+    border-left: 4px solid #D97757;
+}
+.flashcard.back {
+    background-color: #2A322B;
+    border: 1px solid #3D453D;
+    border-left: 4px solid #7FB88A;
+}
+.flashcard .fc-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #A9A89F !important;
+    margin-bottom: 0.7rem;
+}
+.flashcard .fc-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #D97757 !important;
+    margin-bottom: 0.4rem;
+}
+.flashcard.back .fc-label {
+    color: #7FB88A !important;
+}
+.flashcard .fc-content {
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: #ECECE7 !important;
+    line-height: 1.5;
+}
+
 @media (max-width: 640px) {
     .block-container {
         padding-left: 1rem;
@@ -263,6 +312,30 @@ div[data-testid="stMetricValue"] {
         padding-top: 1rem;
     }
     h1 { font-size: 1.6rem; }
+}
+
+/* ==== Ajustes mobile-first (la app se usa principalmente en celular) ==== */
+
+/* Respeta el "notch"/barra inferior en iPhones cuando la PWA corre a pantalla completa */
+.stApp {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Botones y radios con área táctil mínima cómoda (~44px, estándar de accesibilidad táctil) */
+div.stButton > button {
+    min-height: 44px;
+}
+div[role="radiogroup"] label {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+
+/* En pantallas muy angostas, un poco menos de padding y texto más compacto */
+@media (max-width: 400px) {
+    .feature-card { padding: 0.85rem 0.9rem; }
+    .flashcard { padding: 1.1rem 1rem; }
+    div.stButton > button { padding: 0.5rem 1rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -295,14 +368,11 @@ def generar_test():
     for area, lista_preguntas in BANCO_PREGUNTAS.items():
         seleccionadas = random.sample(lista_preguntas, min(PREGUNTAS_POR_AREA, len(lista_preguntas)))
         for p in seleccionadas:
-            preguntas.append({
-                "id": contador_id,
-                "area": area,
-                "tema": p["tema"],
-                "pregunta": p["pregunta"],
-                "opciones": p["opciones"],
-                "correcta": p["correcta"],
-            })
+            # Se copia el diccionario completo (**p) y luego se sobreescriben/agregan
+            # id y area. Así, cualquier campo nuevo que agregues a una pregunta en
+            # preguntas.py (visual, dificultad, imagen, etc.) viaja automáticamente
+            # sin tener que acordarte de listarlo aquí a mano.
+            preguntas.append({**p, "id": contador_id, "area": area})
             contador_id += 1
     random.shuffle(preguntas)
     return preguntas
@@ -325,6 +395,59 @@ def empty_state(icon, title, desc):
         <div class="es-desc">{desc}</div>
     </div>
     """, unsafe_allow_html=True)
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def generar_flashcard_ia(area, tema):
+    """
+    Genera (pregunta, respuesta) para una flashcard usando Groq.
+
+    Se cachea por (area, tema) durante 1 hora: si dos estudiantes o dos
+    sesiones piden flashcard del mismo tema, no se vuelve a llamar la API.
+    Esto ahorra costo/latencia y mantiene el repaso consistente.
+    """
+    prompt = f"""Genera una flashcard de estudio para el examen ICFES (Saber 11) sobre el tema "{tema}", del área "{area}".
+
+Responde ÚNICAMENTE en este formato exacto, sin texto adicional antes o después:
+PREGUNTA: <una pregunta breve y clara sobre el tema>
+RESPUESTA: <la respuesta correcta, clara y concisa, máximo 3 líneas>"""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Eres un generador de flashcards educativas para estudiantes colombianos que se preparan para el ICFES. Sé claro, conciso y pedagógico. Sigue el formato pedido al pie de la letra.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.6,
+            max_tokens=250,
+        )
+        texto = completion.choices[0].message.content.strip()
+
+        pregunta_fc, respuesta_fc = "", ""
+        for linea in texto.splitlines():
+            linea_limpia = linea.strip()
+            if linea_limpia.upper().startswith("PREGUNTA:"):
+                pregunta_fc = linea_limpia.split(":", 1)[1].strip()
+            elif linea_limpia.upper().startswith("RESPUESTA:"):
+                respuesta_fc = linea_limpia.split(":", 1)[1].strip()
+
+        # Si el modelo no siguió el formato exacto, se usa un respaldo razonable
+        if not pregunta_fc:
+            pregunta_fc = f"¿Qué es {tema}?"
+        if not respuesta_fc:
+            respuesta_fc = texto if texto else "Repasa este tema en tus apuntes o con el Chat IA."
+
+        return pregunta_fc, respuesta_fc
+
+    except Exception:
+        return (
+            f"¿Qué es / cómo funciona {tema}?",
+            "No se pudo generar la respuesta con IA en este momento. Intenta de nuevo o pregúntale al Chat IA.",
+        )
 
 
 ICONOS_AREA = {
@@ -561,7 +684,7 @@ elif menu == "📚 Plan de Estudio IA":
     else:
         empty_state("🧭", "Aún no tienes un plan", "Realiza el Test Diagnóstico para que la IA arme un plan de estudio hecho a tu medida.")
 
-# ==================== FLASHCARDS MEJORADAS ====================
+# ==================== FLASHCARDS MEJORADAS (generadas con IA) ====================
 elif menu == "🃏 Flashcards":
     st.markdown('<span class="eyebrow">REPASO</span>', unsafe_allow_html=True)
     st.header("🃏 Flashcards Interactivas")
@@ -571,32 +694,40 @@ elif menu == "🃏 Flashcards":
         if not falencias:
             falencias = [{"area": "Ciencias Naturales", "tema": "Fotosíntesis"}]
 
+        st.caption("Generadas con IA a partir de tus falencias del diagnóstico. Toca la tarjeta para voltearla.")
+
         for i, f in enumerate(falencias[:4]):
-            st.subheader(f"📌 {f['area']} - {f['tema']}")
+            area, tema = f["area"], f["tema"]
 
             if f"flipped_{i}" not in st.session_state:
                 st.session_state[f"flipped_{i}"] = False
 
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                if st.button("🔄 Voltear Tarjeta", key=f"flip_{i}"):
-                    st.session_state[f"flipped_{i}"] = not st.session_state[f"flipped_{i}"]
+            with st.spinner(f"Generando flashcard de {tema}..."):
+                pregunta_fc, respuesta_fc = generar_flashcard_ia(area, tema)
 
-            with col2:
-                if st.session_state[f"flipped_{i}"]:
-                    st.success("**Respuesta:**")
-                    if f["tema"] == "Fotosíntesis":
-                        st.write("**Es el proceso por el cual las plantas convierten la luz solar, agua y CO₂ en glucosa y oxígeno.**")
-                        st.write("Ecuación: 6CO₂ + 6H₂O + luz → C₆H₁₂O₆ + 6O₂")
-                    else:
-                        st.write(f"**Explicación clave:** {f['tema']} es un tema fundamental en el ICFES. Repasa definiciones, ejemplos y ejercicios típicos.")
-                    st.info("💡 Repite esta respuesta en voz alta 3 veces")
-                else:
-                    st.info("**Pregunta (Cara frontal)**")
-                    st.markdown(f"### ¿Qué es / Cómo funciona **{f['tema']}**?")
-                    st.caption("Haz clic en 'Voltear Tarjeta' para ver la respuesta")
+            # st.empty() reserva el espacio de la tarjeta ANTES del botón, así
+            # la tarjeta queda arriba y el botón de voltear abajo (una sola
+            # columna, cómodo para pulgar en celular en vez de dos columnas
+            # angostas lado a lado).
+            card_slot = st.empty()
 
-            st.divider()
+            if st.button("🔄 Voltear tarjeta", key=f"flip_{i}", use_container_width=True):
+                st.session_state[f"flipped_{i}"] = not st.session_state[f"flipped_{i}"]
+
+            flipped = st.session_state[f"flipped_{i}"]
+            cara_clase = "back" if flipped else "front"
+            etiqueta = "RESPUESTA" if flipped else "PREGUNTA"
+            contenido = respuesta_fc if flipped else pregunta_fc
+
+            card_slot.markdown(f"""
+            <div class="flashcard {cara_clase}">
+                <div class="fc-badge">{ICONOS_AREA.get(area, '')} {area} · {tema}</div>
+                <div class="fc-label">{etiqueta}</div>
+                <div class="fc-content">{contenido}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.write("")
     else:
         empty_state("🃏", "Sin flashcards todavía", "Completa el Test Diagnóstico y aquí aparecerán tarjetas de repaso para tus temas más débiles.")
 
