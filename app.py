@@ -129,6 +129,115 @@ div[data-testid="stNotification"], .stAlert {
     border-radius: 14px;
 }
 
+/* ==== Decoración adicional: acentos, tarjetas y estados vacíos ==== */
+
+/* Etiqueta pequeña tipo "eyebrow" sobre los títulos de cada sección */
+.eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #D97757 !important;
+    background-color: rgba(217, 119, 87, 0.12);
+    border: 1px solid rgba(217, 119, 87, 0.35);
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    margin-bottom: 0.7rem;
+}
+
+/* Grid de tarjetas de funcionalidades (página de Inicio) */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.9rem;
+    margin: 1.3rem 0 0.5rem 0;
+}
+@media (max-width: 640px) {
+    .feature-grid { grid-template-columns: 1fr; }
+}
+.feature-card {
+    background-color: #2F2E2B;
+    border: 1px solid #3F3E3A;
+    border-left: 3px solid #D97757;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.feature-card:hover {
+    transform: translateY(-2px);
+    border-color: #D97757;
+}
+.feature-card .fc-icon {
+    font-size: 1.4rem;
+    margin-bottom: 0.4rem;
+    display: block;
+}
+.feature-card .fc-title {
+    font-weight: 600;
+    color: #ECECE7 !important;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+}
+.feature-card .fc-desc {
+    color: #A9A89F !important;
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+/* Estado vacío ilustrado, reemplaza los st.warning/st.info sueltos */
+.empty-state {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background-color: #2F2E2B;
+    border: 1px dashed #4A4A47;
+    border-radius: 16px;
+    margin-top: 1rem;
+}
+.empty-state .es-icon {
+    font-size: 2.2rem;
+    display: block;
+    margin-bottom: 0.6rem;
+    opacity: 0.85;
+}
+.empty-state .es-title {
+    font-weight: 600;
+    color: #ECECE7 !important;
+    font-size: 1.05rem;
+    margin-bottom: 0.3rem;
+}
+.empty-state .es-desc {
+    color: #A9A89F !important;
+    font-size: 0.88rem;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* Métricas nativas de Streamlit con apariencia de tarjeta */
+div[data-testid="stMetric"] {
+    background-color: #2F2E2B;
+    border: 1px solid #3F3E3A;
+    border-radius: 14px;
+    padding: 0.9rem 1rem 0.7rem 1rem;
+}
+div[data-testid="stMetricLabel"] {
+    color: #A9A89F !important;
+}
+div[data-testid="stMetricValue"] {
+    color: #ECECE7 !important;
+}
+
+/* Footer del sidebar */
+.sidebar-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #3A3A37;
+    font-size: 0.75rem;
+    color: #8C8B84 !important;
+    line-height: 1.6;
+}
+.sidebar-footer b { color: #ECECE7 !important; }
+
 @media (max-width: 640px) {
     .block-container {
         padding-left: 1rem;
@@ -147,6 +256,17 @@ menu = st.sidebar.selectbox(
     "Menú",
     ["🏠 Inicio", "📝 Test Diagnóstico", "📊 Mis Resultados", "📚 Plan de Estudio IA", "🃏 Flashcards", "💬 Chat IA"],
 )
+
+if st.session_state.get("nombre_estudiante"):
+    st.sidebar.caption(f"👤 Sesión: **{st.session_state.nombre_estudiante}**")
+
+st.sidebar.markdown("""
+<div class="sidebar-footer">
+<b>IA Preparador ICFES</b><br>
+Diagnóstico · Plan de estudio · Flashcards · Chat<br>
+Hecho con Streamlit + Groq
+</div>
+""", unsafe_allow_html=True)
 
 
 # ==================== FUNCIONES AUXILIARES ====================
@@ -178,14 +298,77 @@ def estimar_puntaje_icfes(puntaje_porcentual):
     return round((puntaje_porcentual / 100) * 500)
 
 
+def empty_state(icon, title, desc):
+    """Tarjeta de estado vacío, reemplaza los st.warning/st.info sueltos."""
+    st.markdown(f"""
+    <div class="empty-state">
+        <span class="es-icon">{icon}</span>
+        <div class="es-title">{title}</div>
+        <div class="es-desc">{desc}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+ICONOS_AREA = {
+    "Matemáticas": "🧮",
+    "Lectura Crítica": "📖",
+    "Ciencias Naturales": "🔬",
+    "Sociales y Ciudadanas": "🌎",
+    "Inglés": "🇬🇧",
+}
+
+
 # ==================== INICIO ====================
 if menu == "🏠 Inicio":
-    st.write("Bienvenido a tu IA para prepararte para el ICFES.")
-    st.success("Usa el menú de la izquierda para navegar.")
-    st.info(f"El test diagnóstico incluye {PREGUNTAS_POR_AREA} preguntas aleatorias de cada una de las 5 áreas del Saber 11.")
+    st.markdown('<span class="eyebrow">SABER 11 · ICFES</span>', unsafe_allow_html=True)
+    st.write("Bienvenido a tu preparador con IA. Haz el diagnóstico, descubre tus falencias y sigue un plan de estudio hecho a tu medida.")
+
+    st.markdown("""
+    <div class="feature-grid">
+        <div class="feature-card">
+            <span class="fc-icon">📝</span>
+            <div class="fc-title">Test Diagnóstico</div>
+            <div class="fc-desc">15 preguntas de las 5 áreas del Saber 11 para medir tu nivel actual.</div>
+        </div>
+        <div class="feature-card">
+            <span class="fc-icon">📊</span>
+            <div class="fc-title">Mis Resultados</div>
+            <div class="fc-desc">Consulta tu historial y la evolución de tu puntaje estimado en el tiempo.</div>
+        </div>
+        <div class="feature-card">
+            <span class="fc-icon">📚</span>
+            <div class="fc-title">Plan de Estudio IA</div>
+            <div class="fc-desc">Un plan de 7 días enfocado en tus falencias, con recursos recomendados.</div>
+        </div>
+        <div class="feature-card">
+            <span class="fc-icon">🃏</span>
+            <div class="fc-title">Flashcards</div>
+            <div class="fc-desc">Repasa con tarjetas interactivas los temas donde más lo necesitas.</div>
+        </div>
+        <div class="feature-card">
+            <span class="fc-icon">💬</span>
+            <div class="fc-title">Chat IA</div>
+            <div class="fc-desc">Resuelve dudas puntuales con un tutor experto disponible 24/7.</div>
+        </div>
+        <div class="feature-card">
+            <span class="fc-icon">🎯</span>
+            <div class="fc-title">Enfocado en ti</div>
+            <div class="fc-desc">Cada recomendación parte de tus propios resultados, no de un plan genérico.</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.get("resultados"):
+        res = st.session_state.resultados
+        st.write("")
+        st.success(f"Tu último diagnóstico: **{res['puntaje']}%** · Estimado ICFES **{res.get('puntaje_icfes', '—')}/500**. Ve a *Plan de Estudio IA* para continuar.")
+    else:
+        st.write("")
+        st.caption(f"💡 El test diagnóstico incluye {PREGUNTAS_POR_AREA} preguntas aleatorias de cada una de las 5 áreas del Saber 11.")
 
 # ==================== TEST DIAGNÓSTICO ====================
 elif menu == "📝 Test Diagnóstico":
+    st.markdown('<span class="eyebrow">DIAGNÓSTICO</span>', unsafe_allow_html=True)
     st.header("📝 Test Diagnóstico Inicial")
     nombre = st.text_input("Tu nombre completo:", value=st.session_state.get("nombre_estudiante", ""))
 
@@ -206,7 +389,7 @@ elif menu == "📝 Test Diagnóstico":
         for p in st.session_state.preguntas:
             if p["area"] != area_actual:
                 area_actual = p["area"]
-                st.markdown(f"#### {area_actual}")
+                st.markdown(f"#### {ICONOS_AREA.get(area_actual, '')} {area_actual}")
             resp = st.radio(p["pregunta"], p["opciones"], key=f"q{p['id']}", index=None)
             st.session_state.respuestas[p["id"]] = resp
 
@@ -249,6 +432,7 @@ elif menu == "📝 Test Diagnóstico":
 
 # ==================== RESULTADOS ====================
 elif menu == "📊 Mis Resultados":
+    st.markdown('<span class="eyebrow">PROGRESO</span>', unsafe_allow_html=True)
     st.header("📊 Mis Resultados")
     nombre = st.text_input("Escribe tu nombre para ver tu historial:", value=st.session_state.get("nombre_estudiante", ""))
 
@@ -276,12 +460,13 @@ elif menu == "📊 Mis Resultados":
                     else:
                         st.write("Sin falencias registradas. ¡Buen resultado!")
         else:
-            st.warning("Aún no tienes resultados guardados con ese nombre. Realiza el Test Diagnóstico primero.")
+            empty_state("📭", "Todavía no hay resultados", "Realiza el Test Diagnóstico para empezar a construir tu historial de progreso.")
     else:
-        st.info("Escribe tu nombre para consultar tu historial.")
+        empty_state("👋", "Ingresa tu nombre", "Escribe tu nombre arriba para consultar tu historial de resultados.")
 
 # ==================== PLAN DE ESTUDIO ====================
 elif menu == "📚 Plan de Estudio IA":
+    st.markdown('<span class="eyebrow">PLAN PERSONALIZADO</span>', unsafe_allow_html=True)
     st.header("📚 Plan de Estudio Personalizado por IA")
     if st.session_state.get("resultados"):
         res = st.session_state.resultados
@@ -326,10 +511,11 @@ elif menu == "📚 Plan de Estudio IA":
                 st.write("- **Respuesta:** (Repasa el concepto clave en los recursos)")
                 st.divider()
     else:
-        st.warning("Realiza primero el Test Diagnóstico.")
+        empty_state("🧭", "Aún no tienes un plan", "Realiza el Test Diagnóstico para que la IA arme un plan de estudio hecho a tu medida.")
 
 # ==================== FLASHCARDS MEJORADAS ====================
 elif menu == "🃏 Flashcards":
+    st.markdown('<span class="eyebrow">REPASO</span>', unsafe_allow_html=True)
     st.header("🃏 Flashcards Interactivas")
 
     if st.session_state.get("resultados"):
@@ -364,11 +550,14 @@ elif menu == "🃏 Flashcards":
 
             st.divider()
     else:
-        st.warning("Realiza el test diagnóstico primero.")
+        empty_state("🃏", "Sin flashcards todavía", "Completa el Test Diagnóstico y aquí aparecerán tarjetas de repaso para tus temas más débiles.")
 
 # ==================== CHAT IA CON GROQ ====================
 elif menu == "💬 Chat IA":
+    st.markdown('<span class="eyebrow">TUTOR IA</span>', unsafe_allow_html=True)
     st.header("💬 Chat con Tutor IA (Groq)")
+    if not st.session_state.get("chat_history"):
+        st.caption("👋 Pregúntame cualquier duda sobre matemáticas, lectura crítica, ciencias, sociales o inglés para el ICFES.")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
