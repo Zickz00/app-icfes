@@ -9,6 +9,8 @@ from database import (
     guardar_resultado,
     obtener_historial,
     obtener_ultimo_resultado,
+    registrar_visita,
+    calcular_racha,
 )
 
 # ==================== CONFIGURACIÓN GROQ ====================
@@ -19,6 +21,12 @@ client = Groq(api_key=API_KEY)
 # Inicializa la base de datos (crea la tabla si no existe). Es seguro llamarlo
 # en cada rerun: CREATE TABLE IF NOT EXISTS no hace nada si ya existe.
 init_db()
+
+# Registra la visita de hoy (para la racha de estudio) una sola vez por sesión,
+# apenas sepamos el nombre del estudiante (se setea en Inicio o en el Test).
+if st.session_state.get("nombre_estudiante") and not st.session_state.get("_visita_registrada"):
+    registrar_visita(st.session_state.nombre_estudiante)
+    st.session_state["_visita_registrada"] = True
 
 # Cuántas preguntas tomar de cada área para armar el diagnóstico
 PREGUNTAS_POR_AREA = 3
@@ -305,6 +313,55 @@ div[data-testid="stMetricValue"] {
     line-height: 1.5;
 }
 
+/* Banner de racha de estudio */
+.streak-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: linear-gradient(135deg, rgba(217,119,87,0.16), rgba(217,119,87,0.05));
+    border: 1px solid rgba(217,119,87,0.35);
+    border-radius: 16px;
+    padding: 0.9rem 1.1rem;
+    margin: 0.8rem 0 1.2rem 0;
+}
+.streak-banner .streak-flame {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+.streak-banner .streak-count {
+    font-weight: 700;
+    color: #ECECE7 !important;
+    font-size: 1rem;
+}
+.streak-banner .streak-sub {
+    color: #B0AFA8 !important;
+    font-size: 0.78rem;
+    margin-top: 0.15rem;
+}
+
+/* Caja de análisis de IA (insight) */
+.ai-insight {
+    background-color: #2F2E2B;
+    border: 1px solid #3F3E3A;
+    border-left: 4px solid #D97757;
+    border-radius: 14px;
+    padding: 1.1rem 1.2rem;
+    margin: 0.6rem 0 1.1rem 0;
+}
+.ai-insight .ai-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #D97757 !important;
+    margin-bottom: 0.5rem;
+}
+.ai-insight .ai-text {
+    color: #ECECE7 !important;
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
 @media (max-width: 640px) {
     .block-container {
         padding-left: 1rem;
@@ -350,6 +407,9 @@ menu = st.sidebar.selectbox(
 
 if st.session_state.get("nombre_estudiante"):
     st.sidebar.caption(f"👤 Sesión: **{st.session_state.nombre_estudiante}**")
+    racha_sidebar = calcular_racha(st.session_state.nombre_estudiante)
+    if racha_sidebar > 0:
+        st.sidebar.caption(f"🔥 Racha: **{racha_sidebar} día{'s' if racha_sidebar != 1 else ''}**")
 
 st.sidebar.markdown("""
 <div class="sidebar-footer">
@@ -450,6 +510,60 @@ RESPUESTA: <la respuesta correcta, clara y concisa, máximo 3 líneas>"""
         )
 
 
+def generar_analisis_falencias(nombre, puntaje, falencias):
+    """
+    Genera un análisis breve y personalizado de las falencias del estudiante
+    usando Groq: qué patrón hay, por qué esos temas suelen costar, y qué
+    reforzar primero. Devuelve None si falla la llamada (se maneja con un
+    respaldo en la interfaz).
+    """
+    temas_txt = "\n".join(f"- {f['area']}: {f['tema']}" for f in falencias)
+    prompt = f"""Un estudiante llamado {nombre} presentó un simulacro tipo ICFES y obtuvo {puntaje}% de aciertos.
+Estas son las preguntas que falló, agrupadas por área y tema:
+{temas_txt}
+
+Escribe un análisis breve (máximo 120 palabras), en español, cercano y motivador, que explique:
+1. Si hay un patrón o conclusión general entre estas falencias.
+2. Por qué estos temas suelen costarles a los estudiantes.
+3. Cuál debería reforzar primero y por qué.
+
+No repitas la lista de temas tal cual (ya se muestra aparte), intégrala de forma natural en la explicación."""
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Eres un tutor experto en el ICFES que da retroalimentación breve, cálida y accionable a partir de resultados de un diagnóstico.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.6,
+            max_tokens=350,
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception:
+        return None
+
+
+def construir_system_prompt():
+    """
+    Arma el system prompt para el Chat IA. Si el estudiante ya tiene un
+    diagnóstico en session_state, le añade contexto de sus falencias para que
+    el tutor pueda personalizar sus respuestas sin que el estudiante tenga
+    que repetir su situación cada vez.
+    """
+    prompt = SYSTEM_PROMPT
+    resultados = st.session_state.get("resultados")
+    if resultados and resultados.get("falencias"):
+        temas = ", ".join(f"{f['area']} ({f['tema']})" for f in resultados["falencias"])
+        prompt += f"""
+
+Contexto del estudiante actual: en su último diagnóstico obtuvo {resultados['puntaje']}% de aciertos (estimado ICFES: {resultados.get('puntaje_icfes', '—')}/500). Sus falencias detectadas fueron: {temas}. Ten esto en cuenta cuando sea relevante: si pregunta algo relacionado con estos temas, profundiza un poco más ya que sabes que le cuestan; si pregunta algo distinto, respóndele con normalidad sin forzar la mención de sus falencias."""
+    return prompt
+
+
 ICONOS_AREA = {
     "Matemáticas": "🧮",
     "Lectura Crítica": "📖",
@@ -490,6 +604,28 @@ def render_visual(visual):
 # ==================== INICIO ====================
 if menu == "🏠 Inicio":
     st.markdown('<span class="eyebrow">SABER 11 · ICFES</span>', unsafe_allow_html=True)
+
+    nombre_home = st.text_input(
+        "¿Cómo te llamas? (para guardar tu progreso y tu racha)",
+        value=st.session_state.get("nombre_estudiante", ""),
+    )
+    if nombre_home.strip():
+        st.session_state.nombre_estudiante = nombre_home.strip()
+
+    if st.session_state.get("nombre_estudiante"):
+        racha = calcular_racha(st.session_state.nombre_estudiante)
+        if racha > 0:
+            plural = "s" if racha != 1 else ""
+            st.markdown(f"""
+            <div class="streak-banner">
+                <span class="streak-flame">🔥</span>
+                <div>
+                    <div class="streak-count">{racha} día{plural} seguido{plural} estudiando</div>
+                    <div class="streak-sub">¡Vas muy bien! Vuelve mañana para no perder la racha.</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
     st.write("Bienvenido a tu preparador con IA. Haz el diagnóstico, descubre tus falencias y sigue un plan de estudio hecho a tu medida.")
 
     st.markdown("""
@@ -581,11 +717,17 @@ elif menu == "📝 Test Diagnóstico":
                     if st.session_state.respuestas.get(p["id"]) != p["correcta"]
                 ]
 
+                analisis_ia = None
+                if falencias:
+                    with st.spinner("Analizando tus resultados con IA..."):
+                        analisis_ia = generar_analisis_falencias(nombre, puntaje, falencias)
+
                 st.session_state.resultados = {
                     "nombre": nombre,
                     "puntaje": puntaje,
                     "puntaje_icfes": puntaje_icfes,
                     "falencias": falencias,
+                    "analisis_ia": analisis_ia,
                 }
 
                 # Persistir en SQLite para el historial
@@ -648,6 +790,17 @@ elif menu == "📚 Plan de Estudio IA":
 
         st.subheader("🎯 Análisis de la IA")
         if falencias:
+            analisis_ia = res.get("analisis_ia")
+            if analisis_ia:
+                st.markdown(f"""
+                <div class="ai-insight">
+                    <div class="ai-label">✨ Análisis personalizado</div>
+                    <div class="ai-text">{analisis_ia}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.info("No fue posible generar el análisis con IA en este momento. Aquí tienes tus falencias de todas formas:")
+
             st.write("**Tus principales falencias detectadas:**")
             for f in falencias:
                 st.write(f"- **{f['area']}**: {f['tema']}")
@@ -736,7 +889,10 @@ elif menu == "💬 Chat IA":
     st.markdown('<span class="eyebrow">TUTOR IA</span>', unsafe_allow_html=True)
     st.header("💬 Chat con Tutor IA (Groq)")
     if not st.session_state.get("chat_history"):
-        st.caption("👋 Pregúntame cualquier duda sobre matemáticas, lectura crítica, ciencias, sociales o inglés para el ICFES.")
+        if st.session_state.get("resultados", {}).get("falencias"):
+            st.caption("👋 Ya conozco los temas donde tuviste más dificultad en tu diagnóstico — pregúntame lo que necesites y lo tendré en cuenta.")
+        else:
+            st.caption("👋 Pregúntame cualquier duda sobre matemáticas, lectura crítica, ciencias, sociales o inglés para el ICFES.")
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
@@ -753,7 +909,7 @@ elif menu == "💬 Chat IA":
 
         with st.spinner("Groq pensando..."):
             try:
-                mensajes_api = [{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.chat_history
+                mensajes_api = [{"role": "system", "content": construir_system_prompt()}] + st.session_state.chat_history
                 completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
                     messages=mensajes_api,

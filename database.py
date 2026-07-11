@@ -15,7 +15,7 @@ funciones.
 
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 DB_PATH = "icfes_app.db"
 
@@ -37,6 +37,13 @@ def init_db():
             puntaje_icfes_estimado INTEGER,
             falencias_json TEXT,
             respuestas_json TEXT
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS visitas (
+            nombre TEXT NOT NULL,
+            fecha TEXT NOT NULL,
+            PRIMARY KEY (nombre, fecha)
         )
     """)
     conn.commit()
@@ -115,3 +122,67 @@ def obtener_nombres_registrados():
     rows = c.fetchall()
     conn.close()
     return [r[0] for r in rows]
+
+
+def registrar_visita(nombre):
+    """
+    Registra que el estudiante usó la app hoy. Es seguro llamarla varias veces
+    el mismo día: PRIMARY KEY (nombre, fecha) evita duplicados.
+
+    Nota: la identificación es por nombre exacto (sin login real), así que
+    "Jose" y "jose " cuentan como personas distintas. Normalizamos a
+    minúsculas y sin espacios extra para reducir ese riesgo, pero sigue sin
+    ser un identificador único de verdad.
+    """
+    nombre_normalizado = nombre.strip().lower()
+    if not nombre_normalizado:
+        return
+    conn = get_conn()
+    c = conn.cursor()
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    c.execute(
+        "INSERT OR IGNORE INTO visitas (nombre, fecha) VALUES (?, ?)",
+        (nombre_normalizado, hoy),
+    )
+    conn.commit()
+    conn.close()
+
+
+def calcular_racha(nombre):
+    """
+    Calcula la racha de días consecutivos en que el estudiante ha usado la
+    app, contando hasta hoy (o hasta ayer, si hoy todavía no ha entrado pero
+    sí entró ayer, para no "castigar" antes de que termine el día).
+    Devuelve 0 si no hay visitas o si la racha ya se rompió.
+    """
+    nombre_normalizado = nombre.strip().lower()
+    if not nombre_normalizado:
+        return 0
+
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute(
+        "SELECT fecha FROM visitas WHERE nombre = ? ORDER BY fecha DESC",
+        (nombre_normalizado,),
+    )
+    fechas = [datetime.strptime(row[0], "%Y-%m-%d").date() for row in c.fetchall()]
+    conn.close()
+
+    if not fechas:
+        return 0
+
+    hoy = datetime.now().date()
+    fecha_esperada = hoy if fechas[0] == hoy else hoy - timedelta(days=1)
+
+    if fechas[0] != fecha_esperada:
+        return 0  # la racha ya se rompió (última visita fue antes de ayer)
+
+    racha = 0
+    for fecha in fechas:
+        if fecha == fecha_esperada:
+            racha += 1
+            fecha_esperada -= timedelta(days=1)
+        elif fecha < fecha_esperada:
+            break
+
+    return racha
