@@ -578,6 +578,10 @@ def render_visual(visual):
     Renderiza el elemento visual de una pregunta (tabla, gráfico de barras,
     gráfico de líneas o figura geométrica), dentro de una tarjeta con borde.
     El campo 'visual' de la pregunta define el 'tipo' y sus datos.
+
+    Los gráficos de barras/líneas admiten dos formatos:
+    - Una sola serie: {"categorias": [...], "valores": [...]}
+    - Varias series:  {"categorias": [...], "series": {"Nombre A": [...], "Nombre B": [...]}}
     """
     tipo = visual.get("tipo")
     with st.container(border=True):
@@ -588,17 +592,39 @@ def render_visual(visual):
 
         elif tipo == "grafico_barras":
             st.caption("📊 Gráfico de barras")
-            df = pd.DataFrame({"valor": visual["valores"]}, index=visual["categorias"])
-            st.bar_chart(df, color="#D97757")
+            if "series" in visual:
+                df = pd.DataFrame(visual["series"], index=visual["categorias"])
+                st.bar_chart(df)
+            else:
+                df = pd.DataFrame({"valor": visual["valores"]}, index=visual["categorias"])
+                st.bar_chart(df, color="#D97757")
 
         elif tipo == "grafico_lineas":
             st.caption("📈 Gráfico de líneas")
-            df = pd.DataFrame({"valor": visual["valores"]}, index=visual["categorias"])
-            st.line_chart(df, color="#D97757")
+            if "series" in visual:
+                df = pd.DataFrame(visual["series"], index=visual["categorias"])
+                st.line_chart(df)
+            else:
+                df = pd.DataFrame({"valor": visual["valores"]}, index=visual["categorias"])
+                st.line_chart(df, color="#D97757")
 
         elif tipo == "figura_geometrica":
             st.caption("📐 Figura geométrica")
             st.markdown(visual["svg"], unsafe_allow_html=True)
+
+
+def render_visuales(visual):
+    """
+    Acepta un solo visual (dict) o varios (lista de dicts, ej. una tabla de
+    datos junto con el diagrama que la acompaña) y los renderiza en orden.
+    """
+    if not visual:
+        return
+    if isinstance(visual, list):
+        for v in visual:
+            render_visual(v)
+    else:
+        render_visual(visual)
 
 
 # ==================== INICIO ====================
@@ -695,8 +721,9 @@ elif menu == "📝 Test Diagnóstico":
             if p["area"] != area_actual:
                 area_actual = p["area"]
                 st.markdown(f"#### {ICONOS_AREA.get(area_actual, '')} {area_actual}")
-            if p.get("visual"):
-                render_visual(p["visual"])
+            if p.get("fuente"):
+                st.caption(f"📄 Pregunta oficial · {p['fuente']}")
+            render_visuales(p.get("visual"))
             resp = st.radio(p["pregunta"], p["opciones"], key=f"q{p['id']}", index=None)
             st.session_state.respuestas[p["id"]] = resp
 

@@ -342,3 +342,15 @@ BANCO_PREGUNTAS = {
         },
     ],
 }
+
+# ==================== FUSIÓN CON EL BANCO OFICIAL ICFES ====================
+# Se agregan al banco propio las preguntas reales de cuadernillos oficiales
+# del ICFES (ver preguntas_oficiales.py). Así, el test diagnóstico puede
+# sacar tanto preguntas propias como preguntas oficiales verificadas, cada
+# una identificable por su campo "fuente".
+from preguntas_oficiales import MATEMATICAS_OFICIALES  # noqa: E402
+
+BANCO_PREGUNTAS["Matemáticas"].extend(MATEMATICAS_OFICIALES)
+# A medida que se agreguen más áreas del cuadernillo oficial (Lectura Crítica,
+# Sociales y Ciudadanas, Ciencias Naturales), se importan y extienden aquí
+# de la misma manera.
