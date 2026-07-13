@@ -349,8 +349,16 @@ BANCO_PREGUNTAS = {
 # sacar tanto preguntas propias como preguntas oficiales verificadas, cada
 # una identificable por su campo "fuente".
 from preguntas_oficiales import MATEMATICAS_OFICIALES  # noqa: E402
+from preguntas_nivel_icfes import (  # noqa: E402
+    LECTURA_CRITICA_NIVEL_ICFES,
+    SOCIALES_NIVEL_ICFES,
+    CIENCIAS_NATURALES_NIVEL_ICFES,
+)
 
 BANCO_PREGUNTAS["Matemáticas"].extend(MATEMATICAS_OFICIALES)
-# A medida que se agreguen más áreas del cuadernillo oficial (Lectura Crítica,
-# Sociales y Ciudadanas, Ciencias Naturales), se importan y extienden aquí
-# de la misma manera.
+BANCO_PREGUNTAS["Lectura Crítica"].extend(LECTURA_CRITICA_NIVEL_ICFES)
+BANCO_PREGUNTAS["Sociales y Ciudadanas"].extend(SOCIALES_NIVEL_ICFES)
+BANCO_PREGUNTAS["Ciencias Naturales"].extend(CIENCIAS_NATURALES_NIVEL_ICFES)
+# A medida que se agreguen más preguntas oficiales reales del cuadernillo
+# (Lectura Crítica, Sociales, Ciencias Naturales), se importan y extienden
+# aquí de la misma manera que Matemáticas.

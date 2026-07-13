@@ -422,11 +422,27 @@ Hecho con Streamlit + Groq
 
 # ==================== FUNCIONES AUXILIARES ====================
 def generar_test():
-    """Arma un test tomando PREGUNTAS_POR_AREA preguntas aleatorias de cada área."""
+    """
+    Arma un test tomando PREGUNTAS_POR_AREA preguntas de cada área,
+    priorizando las preguntas oficiales del ICFES (campo "fuente") sobre las
+    propias. Si un área tiene suficientes oficiales para llenar el cupo, el
+    test para esa área queda 100% oficial; si no alcanzan, se completa con
+    preguntas propias.
+    """
     preguntas = []
     contador_id = 1
     for area, lista_preguntas in BANCO_PREGUNTAS.items():
-        seleccionadas = random.sample(lista_preguntas, min(PREGUNTAS_POR_AREA, len(lista_preguntas)))
+        oficiales = [p for p in lista_preguntas if p.get("fuente")]
+        propias = [p for p in lista_preguntas if not p.get("fuente")]
+
+        n_oficiales = min(PREGUNTAS_POR_AREA, len(oficiales))
+        seleccionadas = random.sample(oficiales, n_oficiales)
+
+        faltan = PREGUNTAS_POR_AREA - n_oficiales
+        if faltan > 0 and propias:
+            seleccionadas += random.sample(propias, min(faltan, len(propias)))
+
+        random.shuffle(seleccionadas)
         for p in seleccionadas:
             # Se copia el diccionario completo (**p) y luego se sobreescriben/agregan
             # id y area. Así, cualquier campo nuevo que agregues a una pregunta en
@@ -611,6 +627,12 @@ def render_visual(visual):
         elif tipo == "figura_geometrica":
             st.caption("📐 Figura geométrica")
             st.markdown(visual["svg"], unsafe_allow_html=True)
+
+        elif tipo == "texto":
+            st.caption("📖 Texto de referencia")
+            if visual.get("titulo"):
+                st.markdown(f"**{visual['titulo']}**")
+            st.write(visual["contenido"])
 
 
 def render_visuales(visual):
