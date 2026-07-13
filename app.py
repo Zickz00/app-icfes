@@ -4,6 +4,8 @@ import pandas as pd
 from groq import Groq
 
 from preguntas import BANCO_PREGUNTAS
+from preguntas_oficiales import FUENTE_2026_1
+from preguntas_nivel_icfes import FUENTE_PROPIA_NIVEL_ICFES
 from database import (
     init_db,
     guardar_resultado,
@@ -432,15 +434,25 @@ def generar_test():
     preguntas = []
     contador_id = 1
     for area, lista_preguntas in BANCO_PREGUNTAS.items():
-        oficiales = [p for p in lista_preguntas if p.get("fuente")]
-        propias = [p for p in lista_preguntas if not p.get("fuente")]
+        # Se distinguen 3 niveles de prioridad, no solo 2:
+        # 1) oficiales      -> de verdad salieron de un cuadernillo real del ICFES
+        # 2) nivel_icfes    -> propias, escritas por IA imitando el estilo/dificultad ICFES
+        # 3) propias_base   -> el resto de preguntas propias (banco original de preguntas.py)
+        oficiales = [p for p in lista_preguntas if p.get("fuente") == FUENTE_2026_1]
+        nivel_icfes = [p for p in lista_preguntas if p.get("fuente") == FUENTE_PROPIA_NIVEL_ICFES]
+        propias_base = [p for p in lista_preguntas if not p.get("fuente")]
 
         n_oficiales = min(PREGUNTAS_POR_AREA, len(oficiales))
         seleccionadas = random.sample(oficiales, n_oficiales)
 
         faltan = PREGUNTAS_POR_AREA - n_oficiales
-        if faltan > 0 and propias:
-            seleccionadas += random.sample(propias, min(faltan, len(propias)))
+        if faltan > 0 and nivel_icfes:
+            n_nivel = min(faltan, len(nivel_icfes))
+            seleccionadas += random.sample(nivel_icfes, n_nivel)
+            faltan -= n_nivel
+
+        if faltan > 0 and propias_base:
+            seleccionadas += random.sample(propias_base, min(faltan, len(propias_base)))
 
         random.shuffle(seleccionadas)
         for p in seleccionadas:
@@ -743,8 +755,10 @@ elif menu == "📝 Test Diagnóstico":
             if p["area"] != area_actual:
                 area_actual = p["area"]
                 st.markdown(f"#### {ICONOS_AREA.get(area_actual, '')} {area_actual}")
-            if p.get("fuente"):
+            if p.get("fuente") == FUENTE_2026_1:
                 st.caption(f"📄 Pregunta oficial · {p['fuente']}")
+            elif p.get("fuente") == FUENTE_PROPIA_NIVEL_ICFES:
+                st.caption(f"🤖 Pregunta nivel ICFES (banco propio) · {p['fuente']}")
             render_visuales(p.get("visual"))
             resp = st.radio(p["pregunta"], p["opciones"], key=f"q{p['id']}", index=None)
             st.session_state.respuestas[p["id"]] = resp
