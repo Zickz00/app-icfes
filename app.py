@@ -502,7 +502,7 @@ RESPUESTA: <la respuesta correcta, clara y concisa, máximo 3 líneas>"""
 
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "system",
@@ -559,7 +559,7 @@ No repitas la lista de temas tal cual (ya se muestra aparte), intégrala de form
 
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "system",
@@ -974,7 +974,7 @@ elif menu == "💬 Chat IA":
             try:
                 mensajes_api = [{"role": "system", "content": construir_system_prompt()}] + st.session_state.chat_history
                 completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="llama-3.1-8b-instant",
                     messages=mensajes_api,
                     temperature=0.5,
                     max_tokens=800,
