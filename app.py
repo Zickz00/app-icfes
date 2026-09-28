@@ -1,7 +1,7 @@
 import random
 import streamlit as st
 import pandas as pd
-from groq import Groq
+from google import genai
 
 from preguntas import BANCO_PREGUNTAS
 from preguntas_oficiales import FUENTE_2026_1
@@ -18,7 +18,7 @@ from database import (
 # ==================== CONFIGURACIÓN GROQ ====================
 API_KEY = st.secrets["GROQ_API_KEY"]
 
-client = Groq(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY)
 
 # Inicializa la base de datos (crea la tabla si no existe). Es seguro llamarlo
 # en cada rerun: CREATE TABLE IF NOT EXISTS no hace nada si ya existe.
