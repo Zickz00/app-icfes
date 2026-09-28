@@ -1,7 +1,7 @@
 import random
 import streamlit as st
 import pandas as pd
-from google import genai
+import google_genai as genai
 
 from preguntas import BANCO_PREGUNTAS
 from preguntas_oficiales import FUENTE_2026_1
